@@ -235,6 +235,7 @@ static void MX_SDIO_SD_Init(void)
   hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
   hsd.Init.ClockDiv = 0;
   /* USER CODE BEGIN SDIO_Init 2 */
+  hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
 
   /* USER CODE END SDIO_Init 2 */
 
@@ -425,26 +426,15 @@ void start_sd_task(void *argument)
         HAL_UART_Transmit(&huart1, (uint8_t *)buff_tx, strlen(buff_tx), 20);
         // Для инициализации карты необходимо включить режим 1bit
         hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
-        mount_state = HAL_SD_Init(&hsd);
+        /*
+          * Инициализация и включение режима 4bit
+          * XXX: Почему-то 4bit работает не на всех картах
+          *      При необходимости поменять режим в CubeMX.
+          */
+        mount_state = BSP_SD_Init();
         if (mount_state == FR_OK) {
           snprintf(buff_tx, BUFF_TX_SIZE, "OK\n");
           HAL_UART_Transmit(&huart1, (uint8_t *)buff_tx, strlen(buff_tx), 20);
-          /*
-           * Включение режима 4bit
-           * XXX: Почему-то работает не на всех картах
-           *      При необходимости закомментировать и
-           *      поменять режим в CubeMX
-           * 
-           *      Почему-то просто закомментировать недостаточно, надо лезть в CubeMX.
-           *      Если, в первый раз после включения stm, вставить карту,
-           *      которая не работает в режиме 4bit, то она не смонтируется, потом все нормально.
-           *      Как будто есть еще где-то кусок кода, который переводит карту в режим 4bit,
-           *      но только во время первого монтирования
-           */
-          mount_state = HAL_SD_ConfigWideBusOperation(&hsd, SDIO_BUS_WIDE_4B);
-          snprintf(buff_tx, BUFF_TX_SIZE, "4BIT: %d\n", mount_state);
-          HAL_UART_Transmit(&huart1, (uint8_t *)buff_tx, strlen(buff_tx), 20);
-
           // Монтируем
           snprintf(buff_tx, BUFF_TX_SIZE, "Mount: ");
           HAL_UART_Transmit(&huart1, (uint8_t *)buff_tx, strlen(buff_tx), 20);
